@@ -118,9 +118,19 @@
   .right-header{padding:14px 16px 10px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
   .right-header h2{font-size:1.05em;font-weight:900;color:#ccc;display:flex;align-items:center;gap:8px}
   .right-header h2 .pref-name{color:#1DA1F2}
-  .right-header .member-stats{display:flex;gap:8px;margin-top:8px;font-size:.72em}
-  .right-header .member-stats span{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:3px 8px}
-  .right-header .member-stats .num{font-weight:900;color:#1DA1F2}
+  .right-summary{
+    margin-top:8px;padding:10px 12px;border-radius:8px;
+    background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);
+  }
+  .right-summary .sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+  .right-summary .sum-item{font-size:.68em;color:#999;display:flex;justify-content:space-between}
+  .right-summary .sum-item .sv{font-weight:900}
+  .right-summary .sum-item .sv.age-c{color:#ff6b6b}
+  .right-summary .sum-item .sv.x-c{color:#1DA1F2}
+  .right-summary .sum-item .sv.f-c{color:#81D4FA}
+  .right-summary .sum-item .sv.gen-c{color:#EF9A9A}
+  .right-summary .sum-bar{display:flex;height:5px;border-radius:3px;overflow:hidden;margin-top:6px}
+  .right-summary .sum-bar div{height:100%}
   .sort-bar{display:flex;gap:4px;margin-top:8px}
   .sort-btn{
     padding:4px 8px;font-size:.65em;font-weight:700;border:1px solid rgba(255,255,255,.08);
@@ -239,11 +249,7 @@
 <div class="right-sidebar">
   <div class="right-header">
     <h2>議員一覧 <span class="pref-name" id="right-pref-name"></span></h2>
-    <div class="member-stats" id="right-stats" style="display:none">
-      <span>議員数 <span class="num" id="right-total">0</span>名</span>
-      <span>X保有 <span class="num" id="right-x-count">0</span>名</span>
-      <span>総F <span class="num" id="right-followers">0</span></span>
-    </div>
+    <div id="right-summary" style="display:none"></div>
     <div class="sort-bar" id="sort-bar" style="display:none">
       <button class="sort-btn active" data-sort="default" onclick="sortMembers('default')">フォロワー順</button>
       <button class="sort-btn" data-sort="kana" onclick="sortMembers('kana')">あいうえお順</button>
@@ -567,25 +573,44 @@ function sortMembers(sort){
 }
 function renderMembers(prefName,sort){
   const el=document.getElementById('right-scroll');
-  const stats=document.getElementById('right-stats');
+  const sumEl=document.getElementById('right-summary');
   const sortBar=document.getElementById('sort-bar');
   document.getElementById('right-pref-name').textContent=prefName;
   let members=M_DATA[prefName];
   if(!members||members.length===0){
     el.innerHTML='<div class="right-empty">この都道府県のデータはありません</div>';
-    stats.style.display='none';sortBar.style.display='none';return;
+    sumEl.style.display='none';sortBar.style.display='none';return;
   }
-  members=[...members]; // clone for sorting
+  // Build summary from DATA/X_DATA/F_DATA
+  const inf=DATA[prefName],xi=X_DATA[prefName],fi=F_DATA[prefName];
+  let sh='<div class="right-summary"><div class="sum-grid">';
+  if(inf){
+    const fr=(inf.f/inf.t*100).toFixed(1);
+    sh+=`<div class="sum-item">議員数<span class="sv">${inf.t}名</span></div>`;
+    sh+=`<div class="sum-item">平均年齢<span class="sv age-c">${inf.avg}歳</span></div>`;
+    sh+=`<div class="sum-item">男 ${inf.m} / 女 ${inf.f}<span class="sv gen-c">${fr}%</span></div>`;
+    sh+=`<div class="sum-item">最高齢/最年少<span class="sv">${inf.mx} / ${inf.mn}歳</span></div>`;
+  }
+  if(xi){sh+=`<div class="sum-item">X保有<span class="sv x-c">${xi.x}/${xi.t}名 (${xi.r}%)</span></div>`}
+  if(fi){
+    sh+=`<div class="sum-item">総フォロワー<span class="sv f-c">${fmtNum(fi.tf)}</span></div>`;
+    sh+=`<div class="sum-item">平均<span class="sv f-c">${fmtNum(fi.af)}</span></div>`;
+    sh+=`<div class="sum-item">最多<span class="sv f-c">@${fi.mu} ${fmtNum(fi.mf)}</span></div>`;
+  }
+  sh+='</div>';
+  if(inf){
+    const mp=inf.m/inf.t*100,fp=inf.f/inf.t*100;
+    sh+=`<div class="sum-bar"><div style="width:${mp}%;background:#64B5F6"></div><div style="width:${fp}%;background:#EF9A9A"></div></div>`;
+  }
+  sh+='</div>';
+  sumEl.innerHTML=sh;sumEl.style.display='block';
+  sortBar.style.display='flex';
+
+  members=[...members];
   if(sort==='kana')members.sort((a,b)=>(a.rd||'ん').localeCompare(b.rd||'ん','ja'));
   else if(sort==='age')members.sort((a,b)=>(b.age||0)-(a.age||0));
   else if(sort==='age-young')members.sort((a,b)=>(a.age||999)-(b.age||999));
   else members.sort((a,b)=>(a.x?0:1)-(b.x?0:1)||-(a.f||0)+(b.f||0));
-  const xCount=members.filter(m=>m.x).length;
-  const totalF=members.reduce((s,m)=>s+(m.f||0),0);
-  document.getElementById('right-total').textContent=members.length;
-  document.getElementById('right-x-count').textContent=xCount;
-  document.getElementById('right-followers').textContent=fmtNum(totalF);
-  stats.style.display='flex';sortBar.style.display='flex';
   let h='';
   members.forEach((m,i)=>{
     const catCls=m.c==='衆議院'||m.c==='参議院'?'cat-national':m.c==='都議'||m.c==='県議'?'cat-pref':'cat-city';
