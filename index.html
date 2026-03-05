@@ -146,6 +146,8 @@
   .member-row{display:flex;align-items:center;gap:8px;padding:8px 16px;border-bottom:1px solid rgba(255,255,255,.03);transition:background .15s}
   .member-row:hover{background:rgba(255,255,255,.03)}
   .member-num{width:22px;font-size:.7em;font-weight:900;color:#444;text-align:center;flex-shrink:0}
+  .member-photo{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;background:#1a1a2e;border:1px solid rgba(255,255,255,.08)}
+  .member-photo-placeholder{width:36px;height:36px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:.5em;color:#444}
   .member-info{flex:1;min-width:0}
   .member-name{font-size:.82em;font-weight:700;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block}
   .member-name:hover{color:#1DA1F2;text-decoration:underline}
@@ -621,7 +623,8 @@ function renderMembers(prefName,sort){
     if(m.x&&m.f!=null){xHtml=`<a href="https://x.com/${m.x}" target="_blank" rel="noopener"><span class="x-badge has-x">X</span><span class="follower-count">${m.f.toLocaleString()}</span></a>`}
     else if(m.x){xHtml=`<a href="https://x.com/${m.x}" target="_blank" rel="noopener"><span class="x-badge has-x">X</span></a>`}
     else{xHtml='<span class="x-badge no-x">未登録</span>'}
-    h+=`<div class="member-row"><span class="member-num">${i+1}</span><div class="member-info"><div><a href="${nameUrl}" target="_blank" rel="noopener" class="member-name">${m.n}</a>${ageStr}</div><div class="member-meta">${areaRole}</div></div><span class="member-cat ${catCls}">${m.c}</span><div class="member-x">${xHtml}</div></div>`;
+    const photoHtml=m.id?`<img class="member-photo" src="https://www.komei.or.jp/members/member_img/${m.id}.jpg" loading="lazy" onerror="this.outerHTML='<div class=\\'member-photo-placeholder\\'>?</div>'">`:'<div class="member-photo-placeholder">?</div>';
+    h+=`<div class="member-row"><span class="member-num">${i+1}</span>${photoHtml}<div class="member-info"><div><a href="${nameUrl}" target="_blank" rel="noopener" class="member-name">${m.n}</a>${ageStr}</div><div class="member-meta">${areaRole}</div></div><span class="member-cat ${catCls}">${m.c}</span><div class="member-x">${xHtml}</div></div>`;
   });
   el.innerHTML=h;el.scrollTop=0;
 }
