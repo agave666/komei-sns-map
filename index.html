@@ -40,7 +40,8 @@
   .tab-btn:last-child{border-radius:0 8px 8px 0}
   .tab-btn.active-age{background:rgba(255,107,107,.1);color:#ff6b6b;border-bottom-color:#ff6b6b}
   .tab-btn.active-x{background:rgba(29,161,242,.1);color:#1DA1F2;border-bottom-color:#1DA1F2}
-  .tab-btn:hover:not(.active-age):not(.active-x){background:rgba(255,255,255,.06);color:#999}
+  .tab-btn.active-ghost{background:rgba(171,71,188,.1);color:#AB47BC;border-bottom-color:#AB47BC}
+  .tab-btn:hover:not(.active-age):not(.active-x):not(.active-ghost){background:rgba(255,255,255,.06);color:#999}
   .sidebar-scroll{
     flex:1;overflow-y:auto;overflow-x:hidden;padding:14px 18px 20px;
     scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;
@@ -173,7 +174,8 @@
     <h1>公明党「高齢化 x SNS」マップ</h1>
     <div class="tab-bar">
       <button class="tab-btn active-age" id="btn-age" onclick="setMode('age')">平均年齢</button>
-      <button class="tab-btn" id="btn-x" onclick="setMode('x')">SNSアカウント保有</button>
+      <button class="tab-btn" id="btn-x" onclick="setMode('x')">SNS保有</button>
+      <button class="tab-btn" id="btn-g" onclick="setMode('ghost')">SNS活用度</button>
     </div>
   </div>
   <div class="sidebar-scroll">
@@ -199,6 +201,35 @@
       <div id="rankings-age">
         <div class="rank-card" id="rank-old"></div>
         <div class="rank-card" id="rank-young"></div>
+      </div>
+    </div>
+    <div class="panel" id="panel-ghost">
+      <div class="stats-row">
+        <div class="stat-chip" style="background:rgba(171,71,188,.12);color:#AB47BC">活用スコア平均 <span class="n">62.7</span>点</div>
+        <div class="stat-chip" style="background:rgba(171,71,188,.12);color:#AB47BC">幽霊アカウント <span class="n">53</span>件</div>
+        <div class="stat-chip" style="background:rgba(171,71,188,.12);color:#AB47BC">アクティブ率 <span class="n">94.6%</span></div>
+        <div class="stat-chip" style="background:rgba(171,71,188,.12);color:#AB47BC">平均ツイート <span class="n">2,828</span>件</div>
+      </div>
+      <div class="legend" id="legend-ghost">
+        <div class="seg" style="background:#F50057" onclick="toggleLegendFilter('ghost',0)" data-idx="0">~45点</div>
+        <div class="seg" style="background:#FF9100" onclick="toggleLegendFilter('ghost',1)" data-idx="1">45~55</div>
+        <div class="seg" style="background:#FFEB3B;color:#000" onclick="toggleLegendFilter('ghost',2)" data-idx="2">55~65</div>
+        <div class="seg" style="background:#66BB6A;color:#000" onclick="toggleLegendFilter('ghost',3)" data-idx="3">65~75</div>
+        <div class="seg" style="background:#AB47BC" onclick="toggleLegendFilter('ghost',4)" data-idx="4">75点~</div>
+      </div>
+      <div class="msg" style="border-color:rgba(171,71,188,.25)">
+        <h2 style="color:#AB47BC">アカウントはあるのに動かない</h2>
+        <span class="big" style="color:#AB47BC">53件</span>
+        <p>X アカウントを持ちながら投稿10件以下の「幽霊アカウント」。
+          <strong style="color:#AB47BC">広島県 16.7%</strong>、<strong style="color:#AB47BC">香川県 23.1%</strong>、<strong style="color:#AB47BC">長崎県 50.0%</strong> — せっかくの発信基盤が眠っている。
+          活用スコアは X保有率×0.3 + アクティブ率×0.3 + 投稿活発度×0.4 の複合指標。
+          <strong style="color:#9C27B0">大阪府 86.5点</strong>がトップ、<strong style="color:#F50057">鹿児島県 35.8点</strong>が最下位。</p>
+      </div>
+      <div id="rankings-ghost">
+        <div class="rank-card" id="rank-ghigh"></div>
+        <div class="rank-card" id="rank-glow"></div>
+        <div class="rank-card" id="rank-ghostrate"></div>
+        <div class="rank-card" id="rank-avgtweet"></div>
       </div>
     </div>
     <div class="panel" id="panel-x">
@@ -333,6 +364,48 @@ const X_DATA={
   "宮崎県":{t:27,x:19,r:70.4},"鹿児島県":{t:22,x:1,r:4.5},"沖縄県":{t:49,x:2,r:4.1},
 };
 
+// ── Ghost/Utilization Data ──
+const G_DATA={
+"北海道":{t:142,x:29,g:0,ac:29,gr:0.0,ar:100.0,at:2588.2,sc:59.7},
+"青森県":{t:18,x:9,g:0,ac:9,gr:0.0,ar:100.0,at:1628.2,sc:58.0},
+"宮城県":{t:28,x:25,g:1,ac:24,gr:4.0,ar:96.0,at:1931.7,sc:70.9},
+"秋田県":{t:1,x:1,g:0,ac:1,gr:0.0,ar:100.0,at:1736.0,sc:73.9},
+"山形県":{t:11,x:2,g:0,ac:2,gr:0.0,ar:100.0,at:2087.5,sc:52.2},
+"福島県":{t:138,x:71,g:2,ac:69,gr:2.8,ar:97.2,at:2162.0,sc:69.7},
+"茨城県":{t:53,x:8,g:0,ac:8,gr:0.0,ar:100.0,at:2395.5,sc:54.1},
+"栃木県":{t:16,x:8,g:1,ac:7,gr:12.5,ar:87.5,at:1661.0,sc:56.4},
+"群馬県":{t:30,x:20,g:0,ac:20,gr:0.0,ar:100.0,at:1679.4,sc:64.4},
+"埼玉県":{t:194,x:92,g:2,ac:90,gr:2.2,ar:97.8,at:3060.0,sc:69.8},
+"千葉県":{t:143,x:84,g:1,ac:83,gr:1.2,ar:98.8,at:3231.0,sc:77.4},
+"東京都":{t:805,x:421,g:9,ac:412,gr:2.1,ar:97.9,at:2468.6,sc:77.4},
+"神奈川県":{t:122,x:77,g:2,ac:75,gr:2.6,ar:97.4,at:2294.3,sc:64.0},
+"新潟県":{t:1,x:1,g:0,ac:1,gr:0.0,ar:100.0,at:2458.0,sc:75.0},
+"石川県":{t:64,x:37,g:3,ac:34,gr:8.1,ar:91.9,at:3589.1,sc:74.7},
+"長野県":{t:56,x:29,g:2,ac:27,gr:6.9,ar:93.1,at:3282.6,sc:70.3},
+"岐阜県":{t:5,x:3,g:0,ac:3,gr:0.0,ar:100.0,at:1902.3,sc:63.2},
+"静岡県":{t:44,x:22,g:1,ac:21,gr:4.5,ar:95.5,at:2457.5,sc:62.2},
+"愛知県":{t:89,x:33,g:0,ac:33,gr:0.0,ar:100.0,at:3201.2,sc:69.3},
+"三重県":{t:36,x:17,g:2,ac:15,gr:11.8,ar:88.2,at:1969.9,sc:57.2},
+"滋賀県":{t:4,x:1,g:0,ac:1,gr:0.0,ar:100.0,at:3078.0,sc:62.1},
+"京都府":{t:62,x:32,g:2,ac:30,gr:6.2,ar:93.8,at:3758.5,sc:73.7},
+"大阪府":{t:212,x:115,g:2,ac:113,gr:1.7,ar:98.3,at:6741.3,sc:86.5},
+"兵庫県":{t:115,x:72,g:6,ac:66,gr:8.3,ar:91.7,at:1844.7,sc:62.3},
+"奈良県":{t:33,x:14,g:0,ac:14,gr:0.0,ar:100.0,at:2381.1,sc:64.9},
+"鳥取県":{t:11,x:3,g:0,ac:3,gr:0.0,ar:100.0,at:6183.0,sc:80.9},
+"岡山県":{t:31,x:2,g:0,ac:2,gr:0.0,ar:100.0,at:1900.5,sc:52.3},
+"広島県":{t:21,x:18,g:3,ac:15,gr:16.7,ar:83.3,at:590.3,sc:52.8},
+"山口県":{t:27,x:8,g:0,ac:8,gr:0.0,ar:100.0,at:2568.0,sc:61.6},
+"香川県":{t:19,x:13,g:3,ac:10,gr:23.1,ar:76.9,at:615.8,sc:50.1},
+"愛媛県":{t:25,x:16,g:2,ac:14,gr:12.5,ar:87.5,at:346.6,sc:50.6},
+"高知県":{t:12,x:1,g:0,ac:1,gr:0.0,ar:100.0,at:230.0,sc:38.3},
+"福岡県":{t:146,x:71,g:2,ac:69,gr:2.8,ar:97.2,at:2015.6,sc:58.5},
+"長崎県":{t:2,x:2,g:1,ac:1,gr:50.0,ar:50.0,at:224.0,sc:46.8},
+"熊本県":{t:44,x:23,g:4,ac:19,gr:17.4,ar:82.6,at:949.3,sc:48.8},
+"宮崎県":{t:35,x:24,g:3,ac:21,gr:12.5,ar:87.5,at:2058.3,sc:63.8},
+"鹿児島県":{t:22,x:1,g:0,ac:1,gr:0.0,ar:100.0,at:562.0,sc:35.8},
+"沖縄県":{t:45,x:3,g:0,ac:3,gr:0.0,ar:100.0,at:5623.3,sc:71.2}
+};
+
 // ── Follower Data ──
 const F_DATA={
   "北海道":{"a":36,"tf":51863,"af":1441,"mf":7476,"mu":"hidemichisato"},
@@ -426,15 +499,20 @@ let focusedPref = null;
 let activeLegend = null; // {mode, idx}
 const ageColorScale = d3.scaleLinear().domain([57,59.5,61.5,63.5,66]).range(["#00E676","#FFEB3B","#FF9100","#FF1744","#F50057"]).clamp(true);
 const xColorScale = d3.scaleLinear().domain([10,30,50,70,90]).range(["#F50057","#FF9100","#FFEB3B","#66BB6A","#1DA1F2"]).clamp(true);
+const ghostColorScale = d3.scaleLinear().domain([35,45,55,65,80]).range(["#F50057","#FF9100","#FFEB3B","#66BB6A","#AB47BC"]).clamp(true);
 function ageColor(a,o){const c=d3.rgb(ageColorScale(a));return`rgba(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)},${o})`}
 function ageSolid(a){return ageColorScale(a)}
 function xRateColor(r,o){const c=d3.rgb(xColorScale(r));return`rgba(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)},${o||1})`}
 function xRateSolid(r){return xColorScale(r)}
+function ghostColor(s,o){const c=d3.rgb(ghostColorScale(s));return`rgba(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)},${o||1})`}
+function ghostSolid(s){return ghostColorScale(s)}
 function getFillColor(nm,opacity){
+  if(currentMode==='ghost'){const gi=G_DATA[nm];return gi?ghostColor(gi.sc,opacity):"rgba(40,40,60,.3)"}
   if(currentMode==='x'){const xi=X_DATA[nm];return xi?xRateColor(xi.r,opacity):"rgba(40,40,60,.3)"}
   const inf=DATA[nm];return inf?ageColor(inf.avg,opacity):"rgba(40,40,60,.3)"
 }
 function getSolidColor(nm){
+  if(currentMode==='ghost'){const gi=G_DATA[nm];return gi?ghostSolid(gi.sc):"#666"}
   if(currentMode==='x'){const xi=X_DATA[nm];return xi?xRateSolid(xi.r):"#666"}
   const inf=DATA[nm];return inf?ageSolid(inf.avg):"#666"
 }
@@ -445,14 +523,21 @@ function setMode(mode){
   currentMode=mode;
   document.getElementById('btn-age').className='tab-btn'+(mode==='age'?' active-age':'');
   document.getElementById('btn-x').className='tab-btn'+(mode==='x'?' active-x':'');
+  document.getElementById('btn-g').className='tab-btn'+(mode==='ghost'?' active-ghost':'');
   document.getElementById('panel-age').className='panel'+(mode==='age'?' active':'');
   document.getElementById('panel-x').className='panel'+(mode==='x'?' active':'');
+  document.getElementById('panel-ghost').className='panel'+(mode==='ghost'?' active':'');
   d3.selectAll('.pref-path').each(function(){
     d3.select(this).attr('fill',getFillColor(d3.select(this).attr('data-name'),.7));
   });
   d3.selectAll('.pref-label').each(function(){
     const nm=d3.select(this).attr('data-pref');
     d3.select(this).attr('fill',getSolidColor(nm));
+    if(d3.select(this).classed('pref-val')){
+      const inf=DATA[nm],xi=X_DATA[nm],gi=G_DATA[nm];
+      const val=currentMode==='ghost'&&gi?`${gi.sc}点`:currentMode==='x'&&xi?`${xi.r}%`:inf?`${inf.avg}歳`:'';
+      d3.select(this).text(val);
+    }
   });
   clearFocus();
 }
@@ -483,21 +568,24 @@ function clearLegendActive(){
 const AGE_RANGES=[[0,59.99],[60,61.99],[62,63.99],[64,65.99],[66,999]];
 // X ranges: [~20%, 20~40%, 40~60%, 60~80%, 80%~]
 const X_RANGES=[[0,19.99],[20,39.99],[40,59.99],[60,79.99],[80,100]];
+// Ghost/Utilization score ranges
+const GHOST_RANGES=[[0,44.99],[45,54.99],[55,64.99],[65,74.99],[75,100]];
 
 function toggleLegendFilter(mode,idx){
-  // If same filter is active, deactivate
   if(activeLegend&&activeLegend.mode===mode&&activeLegend.idx===idx){
     clearFocus();return;
   }
   activeLegend={mode,idx};focusedPref=null;
   clearLegendActive();
-  const legendId=mode==='age'?'legend-age':'legend-x';
+  const legendId=mode==='age'?'legend-age':mode==='ghost'?'legend-ghost':'legend-x';
   document.querySelector(`#${legendId} .seg[data-idx="${idx}"]`).classList.add('seg-active');
-  // Find matching prefectures
   let matching=[];
   if(mode==='age'){
     const[lo,hi]=AGE_RANGES[idx];
     for(const[nm,v]of Object.entries(DATA)){if(v.avg>=lo&&v.avg<=hi)matching.push(nm)}
+  }else if(mode==='ghost'){
+    const[lo,hi]=GHOST_RANGES[idx];
+    for(const[nm,v]of Object.entries(G_DATA)){if(v.sc>=lo&&v.sc<=hi)matching.push(nm)}
   }else{
     const[lo,hi]=X_RANGES[idx];
     for(const[nm,v]of Object.entries(X_DATA)){if(v.r>=lo&&v.r<=hi)matching.push(nm)}
@@ -556,7 +644,8 @@ d3.json("https://raw.githubusercontent.com/dataofjapan/land/master/japan.topojso
     labelG.append("text").attr("class","pref-label").attr("data-pref",nm)
       .attr("x",c[0]).attr("y",c[1]-6).attr("font-size","11px").attr("fill",col).text(sn);
     // Value below name
-    const val=currentMode==='x'&&xi?`${xi.r}%`:`${inf.avg}歳`;
+    const gi=G_DATA[nm];
+    const val=currentMode==='ghost'&&gi?`${gi.sc}点`:currentMode==='x'&&xi?`${xi.r}%`:`${inf.avg}歳`;
     labelG.append("text").attr("class","pref-label pref-val").attr("data-pref",nm)
       .attr("x",c[0]).attr("y",c[1]+8).attr("font-size","9px").attr("fill",col).attr("opacity",.8).text(val);
   });
@@ -598,6 +687,11 @@ function renderMembers(prefName,sort){
     sh+=`<div class="sum-item">総フォロワー<span class="sv f-c">${fmtNum(fi.tf)}</span></div>`;
     sh+=`<div class="sum-item">平均<span class="sv f-c">${fmtNum(fi.af)}</span></div>`;
     sh+=`<div class="sum-item">最多<span class="sv f-c">@${fi.mu} ${fmtNum(fi.mf)}</span></div>`;
+  }
+  const gi=G_DATA[prefName];
+  if(gi){
+    sh+=`<div class="sum-item">活用スコア<span class="sv" style="color:#AB47BC">${gi.sc}点</span></div>`;
+    sh+=`<div class="sum-item">幽霊<span class="sv" style="color:#FF9100">${gi.g}件 (${gi.gr}%)</span></div>`;
   }
   sh+='</div>';
   if(inf){
@@ -645,6 +739,12 @@ rr("rank-xhigh","X保有率が高い (10名以上)",[...xa].filter(a=>a.t>=10).s
 rr("rank-xlow","X保有率が低い (10名以上)",[...xa].filter(a=>a.t>=10).sort((a,b)=>a.r-b.r).slice(0,7),d=>d.r,"%","#F50057",100);
 rr("rank-fhigh","平均フォロワー数が多い (3件以上)",[...fa].filter(a=>a.a>=3).sort((a,b)=>b.af-a.af).slice(0,7),d=>d.af,"人","#81D4FA",10000);
 rr("rank-flow","平均フォロワー数が少ない (3件以上)",[...fa].filter(a=>a.a>=3).sort((a,b)=>a.af-b.af).slice(0,7),d=>d.af,"人","#FFAB91",10000);
+// Ghost rankings
+const ga=Object.entries(G_DATA).map(([n,v])=>({name:n,...v}));
+rr("rank-ghigh","SNS活用スコアが高い (X保有3件以上)",[...ga].filter(a=>a.x>=3).sort((a,b)=>b.sc-a.sc).slice(0,7),d=>d.sc,"点","#AB47BC",100);
+rr("rank-glow","SNS活用スコアが低い (X保有3件以上)",[...ga].filter(a=>a.x>=3).sort((a,b)=>a.sc-b.sc).slice(0,7),d=>d.sc,"点","#F50057",100);
+rr("rank-ghostrate","幽霊アカウント率が高い (X保有3件以上)",[...ga].filter(a=>a.x>=3).sort((a,b)=>b.gr-a.gr).slice(0,7),d=>d.gr,"%","#FF9100",100);
+rr("rank-avgtweet","平均ツイート数が多い (X保有3件以上)",[...ga].filter(a=>a.x>=3).sort((a,b)=>b.at-a.at).slice(0,7),d=>Math.round(d.at),"件","#66BB6A",10000);
 </script>
 </body>
 </html>
