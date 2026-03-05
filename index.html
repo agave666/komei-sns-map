@@ -58,9 +58,11 @@
   .stat-chip.f-chip{background:rgba(129,212,250,.08);border-color:rgba(129,212,250,.18)}
   .stat-chip.f-chip .n{color:#81D4FA}
   .legend{display:flex;gap:1px;margin-bottom:14px}
-  .legend .seg{padding:3px 8px;font-weight:700;font-size:.62em;white-space:nowrap}
+  .legend .seg{padding:3px 8px;font-weight:700;font-size:.62em;white-space:nowrap;cursor:pointer;transition:all .2s;opacity:.7;border:2px solid transparent}
   .legend .seg:first-child{border-radius:5px 0 0 5px}
   .legend .seg:last-child{border-radius:0 5px 5px 0}
+  .legend .seg:hover{opacity:1}
+  .legend .seg.seg-active{opacity:1;border-color:#fff;box-shadow:0 0 8px rgba(255,255,255,.3)}
   .msg{
     background:linear-gradient(135deg,rgba(255,107,107,.06),rgba(29,161,242,.06));
     border:1px solid rgba(255,107,107,.2);border-radius:12px;padding:16px;margin-bottom:16px;
@@ -170,12 +172,12 @@
         <div class="stat-chip">最年少 <span class="n">36</span>歳</div>
         <div class="stat-chip">40歳未満 <span class="n">5</span>名</div>
       </div>
-      <div class="legend">
-        <div class="seg" style="background:#00E676;color:#000">~59歳</div>
-        <div class="seg" style="background:#FFEB3B;color:#000">60~61</div>
-        <div class="seg" style="background:#FF9100">62~63</div>
-        <div class="seg" style="background:#FF1744">64~65</div>
-        <div class="seg" style="background:#F50057">66~</div>
+      <div class="legend" id="legend-age">
+        <div class="seg" style="background:#00E676;color:#000" onclick="toggleLegendFilter('age',0)" data-idx="0">~59歳</div>
+        <div class="seg" style="background:#FFEB3B;color:#000" onclick="toggleLegendFilter('age',1)" data-idx="1">60~61</div>
+        <div class="seg" style="background:#FF9100" onclick="toggleLegendFilter('age',2)" data-idx="2">62~63</div>
+        <div class="seg" style="background:#FF1744" onclick="toggleLegendFilter('age',3)" data-idx="3">64~65</div>
+        <div class="seg" style="background:#F50057" onclick="toggleLegendFilter('age',4)" data-idx="4">66~</div>
       </div>
       <div class="msg">
         <h2 style="color:#ff6b6b">若い世代の声は届いているのか？</h2>
@@ -194,12 +196,12 @@
         <div class="stat-chip f-chip">総フォロワー <span class="n">219万</span></div>
         <div class="stat-chip f-chip">平均 <span class="n">1,748</span>人</div>
       </div>
-      <div class="legend">
-        <div class="seg" style="background:#F50057">~20%</div>
-        <div class="seg" style="background:#FF9100">20~40%</div>
-        <div class="seg" style="background:#FFEB3B;color:#000">40~60%</div>
-        <div class="seg" style="background:#66BB6A;color:#000">60~80%</div>
-        <div class="seg" style="background:#1DA1F2">80%~</div>
+      <div class="legend" id="legend-x">
+        <div class="seg" style="background:#F50057" onclick="toggleLegendFilter('x',0)" data-idx="0">~20%</div>
+        <div class="seg" style="background:#FF9100" onclick="toggleLegendFilter('x',1)" data-idx="1">20~40%</div>
+        <div class="seg" style="background:#FFEB3B;color:#000" onclick="toggleLegendFilter('x',2)" data-idx="2">40~60%</div>
+        <div class="seg" style="background:#66BB6A;color:#000" onclick="toggleLegendFilter('x',3)" data-idx="3">60~80%</div>
+        <div class="seg" style="background:#1DA1F2" onclick="toggleLegendFilter('x',4)" data-idx="4">80%~</div>
       </div>
       <div class="msg" style="border-color:rgba(29,161,242,.25)">
         <h2 style="color:#1DA1F2">SNS不在 — 有権者に届かない声</h2>
@@ -412,6 +414,8 @@ const M_DATA={
 let currentMode = 'age';
 let currentPref = null;
 let currentSort = 'default';
+let focusedPref = null;
+let activeLegend = null; // {mode, idx}
 const ageColorScale = d3.scaleLinear().domain([57,59.5,61.5,63.5,66]).range(["#00E676","#FFEB3B","#FF9100","#FF1744","#F50057"]).clamp(true);
 const xColorScale = d3.scaleLinear().domain([10,30,50,70,90]).range(["#F50057","#FF9100","#FFEB3B","#66BB6A","#1DA1F2"]).clamp(true);
 function ageColor(a,o){const c=d3.rgb(ageColorScale(a));return`rgba(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)},${o})`}
@@ -447,14 +451,50 @@ function setMode(mode){
 
 // ── Focus/Dim prefectures ──
 function focusPref(prefName){
+  focusedPref=prefName;activeLegend=null;clearLegendActive();
   d3.selectAll('.pref-path').classed('dimmed',true).classed('focused',false);
   d3.selectAll('.pref-path').filter(function(){return d3.select(this).attr('data-name')===prefName})
     .classed('dimmed',false).classed('focused',true);
   d3.selectAll('.pref-label').style('opacity',function(){return d3.select(this).attr('data-pref')===prefName?1:.15});
 }
+function focusMultiple(prefNames){
+  const s=new Set(prefNames);
+  d3.selectAll('.pref-path').classed('dimmed',function(){return !s.has(d3.select(this).attr('data-name'))}).classed('focused',function(){return s.has(d3.select(this).attr('data-name'))});
+  d3.selectAll('.pref-label').style('opacity',function(){return s.has(d3.select(this).attr('data-pref'))?1:.15});
+}
 function clearFocus(){
+  focusedPref=null;activeLegend=null;clearLegendActive();
   d3.selectAll('.pref-path').classed('dimmed',false).classed('focused',false);
   d3.selectAll('.pref-label').style('opacity',1);
+}
+function clearLegendActive(){
+  document.querySelectorAll('.legend .seg').forEach(s=>s.classList.remove('seg-active'));
+}
+
+// Age ranges: [~59, 60~61, 62~63, 64~65, 66~]
+const AGE_RANGES=[[0,59.99],[60,61.99],[62,63.99],[64,65.99],[66,999]];
+// X ranges: [~20%, 20~40%, 40~60%, 60~80%, 80%~]
+const X_RANGES=[[0,19.99],[20,39.99],[40,59.99],[60,79.99],[80,100]];
+
+function toggleLegendFilter(mode,idx){
+  // If same filter is active, deactivate
+  if(activeLegend&&activeLegend.mode===mode&&activeLegend.idx===idx){
+    clearFocus();return;
+  }
+  activeLegend={mode,idx};focusedPref=null;
+  clearLegendActive();
+  const legendId=mode==='age'?'legend-age':'legend-x';
+  document.querySelector(`#${legendId} .seg[data-idx="${idx}"]`).classList.add('seg-active');
+  // Find matching prefectures
+  let matching=[];
+  if(mode==='age'){
+    const[lo,hi]=AGE_RANGES[idx];
+    for(const[nm,v]of Object.entries(DATA)){if(v.avg>=lo&&v.avg<=hi)matching.push(nm)}
+  }else{
+    const[lo,hi]=X_RANGES[idx];
+    for(const[nm,v]of Object.entries(X_DATA)){if(v.r>=lo&&v.r<=hi)matching.push(nm)}
+  }
+  focusMultiple(matching);
 }
 
 // ── Map ──
@@ -475,6 +515,8 @@ svg.call(zoom);
 document.getElementById("zin").onclick=()=>svg.transition().duration(300).call(zoom.scaleBy,1.5);
 document.getElementById("zout").onclick=()=>svg.transition().duration(300).call(zoom.scaleBy,0.67);
 document.getElementById("zreset").onclick=()=>{svg.transition().duration(400).call(zoom.transform,d3.zoomIdentity);clearFocus()};
+// Click on empty map area clears focus
+svg.on("click",function(){if(focusedPref||activeLegend)clearFocus()});
 
 d3.json("https://raw.githubusercontent.com/dataofjapan/land/master/japan.topojson").then(topo=>{
   const geo=topojson.feature(topo,topo.objects.japan);
@@ -486,9 +528,12 @@ d3.json("https://raw.githubusercontent.com/dataofjapan/land/master/japan.topojso
     .attr("fill",d=>getFillColor(d.properties[pk]||"",.7))
     .on("mouseover",function(){if(!d3.select(this).classed('dimmed'))d3.select(this).attr("fill",getFillColor(d3.select(this).attr("data-name"),.9))})
     .on("mouseout",function(){d3.select(this).attr("fill",getFillColor(d3.select(this).attr("data-name"),.7))})
-    .on("click",function(){
+    .on("click",function(e){
+      e.stopPropagation();
       const nm=d3.select(this).attr("data-name");
-      if(nm){showMembers(nm);focusPref(nm)}
+      if(!nm)return;
+      if(focusedPref===nm){clearFocus();return}
+      showMembers(nm);focusPref(nm);
     });
   mapG.append("path").datum(topojson.mesh(topo,topo.objects.japan,(a,b)=>a!==b)).attr("fill","none").attr("stroke","rgba(255,255,255,.1)").attr("stroke-width",.4).attr("d",path);
 
